@@ -35,3 +35,26 @@ python vectorStore.py
 ```bash
 python chat.py
 ```
+## Breast Cancer Chatbot – RAG-based AI Agent --- DESCRIPTION
+
+This project is an intelligent chatbot designed to assist users by answering questions related to **breast cancer**. It leverages a **Retrieval-Augmented Generation (RAG)** approach and integrates with **Qdrant**, a vector database for efficient semantic search.
+
+### 🔍 How It Works
+
+1. **Initial Filtering:**  
+   The chatbot first analyzes user input to determine if the question is related to breast cancer.
+
+2. **FAQ Lookup:**  
+   If the question is relevant, the agent first tries to answer using pre-curated **Frequently Asked Questions** (FAQ).
+
+3. **General Knowledge Retrieval:**  
+   If no answer is found in the FAQ, it searches through broader **domain documents** related to breast cancer.
+
+4. **Fallback to Search Agent:**  
+   If nothing is found in the above steps, the system activates a more advanced **search agent** to provide the best possible response.
+
+5. **Answer Storage:**  
+   Every valid interaction is logged and stored into the **Knowledge Base (KB)** to continuously improve future responses.
+
+---
+
