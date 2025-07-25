@@ -4,6 +4,39 @@ from embedding_search import search_faq, search_kb
 from llm_client import llm
 import asyncio
 from search_agent import search_agent_fallback
+from qdrant_client import QdrantClient
+import os
+import numpy as np
+from embedding_search import embedder
+import uuid
+
+QDRANT_URL = os.getenv("QDRANT_URL")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
+DOCS_COLLECTION = os.getenv("QDRANT_DOCS_COLLECTION", "docs_collection")
+
+qdrant_client = QdrantClient(
+    url=QDRANT_URL,
+    api_key=QDRANT_API_KEY
+)
+
+def register_search_in_kb(query, answer, source="search_agent_fallback"):
+    vector = embedder.encode([answer], convert_to_numpy=True)[0]
+    payload = {
+        "chunk": answer,
+        "source": source,
+        "original_query": query
+    }
+    qdrant_client.upsert(
+        collection_name=DOCS_COLLECTION,
+        points=[
+            {
+                "id": str(uuid.uuid4()),  # ✅ Unique ID
+                "vector": vector.tolist(),
+                "payload": payload
+            }
+        ]
+    )
+    
 def detect_greeting_language(query: str) -> str:
     """
     Heuristic-based greeting language detection for common greetings.
@@ -115,4 +148,5 @@ def answer_query(query: str) -> str:
     # 🌐 Step 6: Fallback search
     fallback_response_en = asyncio.run(search_agent_fallback(query_en))
     fallback_response = translate_from_english(fallback_response_en, lang) if lang != "en" else fallback_response_en
+    register_search_in_kb(query_en, fallback_response_en, source="search_agent_fallback")
     return fallback_response

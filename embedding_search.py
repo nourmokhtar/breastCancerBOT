@@ -24,7 +24,7 @@ qdrant_client = QdrantClient(
 
 embedder = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
 
-def search_faq(query, threshold=0.3, max_hits=1):
+def search_faq(query, threshold=0.7, max_hits=1):
     q_emb = embedder.encode([query], convert_to_numpy=True)[0]
     hits = qdrant_client.search(
         collection_name=FAQ_COLLECTION,
@@ -38,7 +38,7 @@ def search_faq(query, threshold=0.3, max_hits=1):
     return hits[0].payload.get("page_content", None)
 
 
-def search_kb(query, threshold=0.75, max_hits=3):
+def search_kb(query, threshold=0.85, max_hits=3):
     q_emb = embedder.encode([query], convert_to_numpy=True)[0]
     hits = qdrant_client.search(
         collection_name=DOCS_COLLECTION,
