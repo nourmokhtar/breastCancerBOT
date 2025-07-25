@@ -54,3 +54,10 @@ async def search_agent_fallback(query, max_links=3):
         if answer.strip():
             return f"\n{answer}"
     return "Sorry, couldn't extract a good answer from the web."
+
+if __name__ == "__main__":
+    import asyncio
+
+    query = "What are the symptoms of breast cancer?"
+    result = asyncio.run(search_agent_fallback(query))
+    print("Search Agent Result:\n", result)

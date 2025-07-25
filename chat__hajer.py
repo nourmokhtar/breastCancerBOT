@@ -102,12 +102,58 @@ chain_with_history = RunnableWithMessageHistory(
 )
 
 # === CLI Chat Loop
+# === Breast Cancer Relevance Filter
+def is_breast_cancer_related(text: str) -> bool:
+    """Semantic filter: quick keyword check, then zero-shot LLM YES/NO."""
+    keywords = ["breast cancer", "mammogram", "tumor", "mastectomy", "her2", "biopsy"]
+    if any(k in text.lower() for k in keywords):
+        return True
+
+    # Zero-shot check
+    system_prompt = (
+        "You are an AI classifier. Answer ONLY YES or NO whether this query is about breast cancer or related topics. "
+        "The query may be in English or Arabic."
+    )
+    user_prompt = f"Query: \"{text}\""
+
+    response = llm.invoke({
+        "context": "",
+        "question": user_prompt,
+        "chat_history": []
+    })
+
+    return response.strip().lower().startswith("yes")
+def is_greeting(text: str) -> bool:
+    """Use LLM to detect if the input is a greeting or salutation."""
+    system_prompt = (
+        "You are an AI classifier. Answer ONLY YES or NO whether the following query is a greeting, salutation, or friendly message. "
+        "The query may be in English, Arabic, French, or Tunisian dialect."
+    )
+    user_prompt = f"Query: \"{text}\""
+
+    response = llm.invoke({
+        "context": "",
+        "question": user_prompt,
+        "chat_history": []
+    })
+
+    return response.strip().lower().startswith("yes")
+
+# === CLI Chat Loop
 if __name__ == "__main__":
     print("🤖 Breast Cancer Chatbot. Type 'exit' to quit.\n")
     while True:
         q = input("You: ")
         if q.lower() in ["exit", "quit"]:
             break
+
+        if is_greeting(q):
+            print("Bot: Hello! 👋 I am your assistant for all things related to breast cancer. How can I help you today?")
+            continue
+
+        if not is_breast_cancer_related(q):
+            print("Bot: Sorry, I can only answer questions related to breast cancer.")
+            continue
 
         response = chain_with_history.invoke(
             {"question": q},
