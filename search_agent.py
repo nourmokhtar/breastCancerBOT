@@ -50,23 +50,31 @@ async def fetch_text(url):
             return ""
         
 def register_search_in_kb(query, answer, source="search_agent_fallback"):
-    vector = embedder.encode([answer], convert_to_numpy=True)[0]
-    payload = {
-        "chunk": answer,
-        "source": source,
-        "original_query": query
-    }
-    qdrant_client.upsert(
-        collection_name=DOCS_COLLECTION,
-        points=[
-            {
-                "id": str(uuid.uuid4()),  # ✅ Unique ID
-                "vector": vector.tolist(),
-                "payload": payload
-            }
-        ]
-    )
-    
+    try:
+        vector = embedder.encode([answer], convert_to_numpy=True)[0]
+        print(f"Registering search result in KB... (source={source})")
+        print(f"Vector shape: {vector.shape}")
+
+        payload = {
+            "chunk": answer,
+            "source": source,
+            "original_query": query
+        }
+
+        qdrant_client.upsert(
+            collection_name=DOCS_COLLECTION,
+            points=[
+                {
+                    "id": str(uuid.uuid4()),
+                    "vector": vector.tolist(),
+                    "payload": payload
+                }
+            ]
+        )
+        print("✅ Upserted into Qdrant successfully.")
+
+    except Exception as e:
+        print(f"❌ Failed to upsert into Qdrant: {e}")
 
 async def search_agent_fallback(query, max_links=3):
     links = search_serper(query)

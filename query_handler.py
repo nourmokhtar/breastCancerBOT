@@ -128,7 +128,9 @@ def answer_query(query: str) -> str:
             return f"📚 KB-based: {final_answer}\n\n{('(مزيد من التفاصيل؟)' if lang == 'ar' else 'Besoin de plus de détails ?' if lang == 'fr' else 'Need more detail?')}"
 
     # 🌐 Step 6: Fallback search
+    print ("searching the web ")
     fallback_response_en = asyncio.run(search_agent_fallback(query_en))
     fallback_response = translate_from_english(fallback_response_en, lang) if lang != "en" else fallback_response_en
+    print("Registering fallback in KB...")
     register_search_in_kb(query_en, fallback_response_en, source="search_agent_fallback")
     return fallback_response
