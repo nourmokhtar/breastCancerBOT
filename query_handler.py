@@ -3,7 +3,7 @@ from translation import detect_language, translate_to_english, translate_from_en
 from embedding_search import search_faq, search_kb
 from llm_client import llm
 import asyncio
-from search_agent import search_agent_fallback
+from search_agent import search_agent_fallback,register_search_in_kb
 from qdrant_client import QdrantClient
 import os
 import numpy as np
@@ -19,24 +19,6 @@ qdrant_client = QdrantClient(
     api_key=QDRANT_API_KEY
 )
 
-def register_search_in_kb(query, answer, source="search_agent_fallback"):
-    vector = embedder.encode([answer], convert_to_numpy=True)[0]
-    payload = {
-        "chunk": answer,
-        "source": source,
-        "original_query": query
-    }
-    qdrant_client.upsert(
-        collection_name=DOCS_COLLECTION,
-        points=[
-            {
-                "id": str(uuid.uuid4()),  # ✅ Unique ID
-                "vector": vector.tolist(),
-                "payload": payload
-            }
-        ]
-    )
-    
 def detect_greeting_language(query: str) -> str:
     """
     Heuristic-based greeting language detection for common greetings.
