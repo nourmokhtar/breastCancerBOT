@@ -5,6 +5,8 @@ import sounddevice as sd
 import numpy as np
 import tempfile
 import scipy.io.wavfile
+from playsound import playsound
+import os
 
 # Initialize Whisper model once
 whisper_model = WhisperModel("small", device="cpu")
@@ -14,10 +16,25 @@ def transcribe_audio_file(filepath):
     full_text = " ".join(segment.text for segment in segments)
     return full_text.strip()
 
-def text_to_speech(text, filename="output.mp3", lang="en"):
-    tts = gTTS(text=text, lang=lang)
-    tts.save(filename)
-    print(f"Saved speech audio to {filename}")
+
+def text_to_speech(text, lang):
+    """
+    Convert text to speech and play it automatically.
+    
+    Parameters:
+    - text (str): Text to convert to speech.
+    - lang (str): Language code (e.g., 'en', 'fr', 'ar').
+    
+    This function creates a temporary mp3 file, plays it, then deletes it.
+    """
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
+            tts = gTTS(text=text, lang=lang)
+            tts.save(tmp_file.name)
+            playsound(tmp_file.name)
+        os.remove(tmp_file.name)
+    except Exception as e:
+        print(f"⚠️ Text-to-speech error: {e}")
 
 # New function to record from mic and save temporary wav
 def record_audio(duration=5, fs=16000):

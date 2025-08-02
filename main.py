@@ -3,17 +3,25 @@ import sys
 from query_handler import answer_query
 from speech_io import transcribe_audio_file, text_to_speech, transcribe_live
 from translation import detect_language, translate_to_english, translate_from_english
-
-
+from grammar_correction import correct_grammar
 def process_query(user_input):
     """
-    Detect language, translate to English, get answer, translate back.
+    Detect language, correct grammar if supported, translate to English, get answer, translate back.
     """
     try:
         lang = detect_language(user_input)
         print(f"🌍 Detected language: {lang}")
     except:
         lang = "en"
+
+    # ✅ Only correct grammar if the language is supported
+    try:
+        if lang in ["en", "fr", "ar"]:
+            from grammar_correction import correct_grammar
+            user_input = correct_grammar(user_input, lang)
+            print(f"✍️ Corrected input: {user_input}")
+    except Exception as e:
+        print(f"⚠️ Grammar correction failed: {e}")
 
     try:
         user_input_en = translate_to_english(user_input, lang)
@@ -30,7 +38,6 @@ def process_query(user_input):
         answer_local = answer_en
 
     return answer_local, lang
-
 
 def main():
     print("🩷 Welcome to the Breast Cancer Support Assistant 🩷")
@@ -100,6 +107,12 @@ def main():
 
                 reply, lang = process_query(user_input)
                 print(f"🤖 Assistant: {reply}")
+# Use the detected language to speak the reply
+                if lang not in ["ar", "fr", "en"]:
+                    lang = "en"  # fallback
+
+                #text_to_speech(reply, lang=lang)
+
                 print("🎙 Press ENTER to record again, or type 'back'/'exit'.")
 
         else:

@@ -17,7 +17,7 @@ cd chatbot
 python -m venv venv
 venv\Scripts\activate  # On Windows
 # or
-source venv/bin/activate  # On macOS/Linux
+source venv/bin/activate  #py  On macOS/Linux
 ```
 
 ### 3. Install dependencies
