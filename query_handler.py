@@ -46,11 +46,14 @@ def is_breast_cancer_related(text: str) -> bool:
         "The query may be in English, Arabic, or French."
     )
     user_prompt = f"Query: \"{text}\""
+    
     resp = llm([
-        {"type": "system", "content": system_prompt},
-        {"type": "user", "content": user_prompt}
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
     ])
+    
     return resp.strip().lower().startswith("yes")
+
 
 def ask_llm_with_context(question: str, context: str, lang: str = "en") -> str:
     """
@@ -70,24 +73,17 @@ QUESTION: {question}
 CONTEXT:
 {context}
 """
-    return llm([{"type": "system", "content": prompt}])
-def answer_query(query: str) -> str:
+    
+    # THIS is where you call the llm
+    return llm([{"role": "system", "content": prompt}])
+def answer_query(query: str, return_kb_only=False):
     """
-    Main query answering function:
-    - Check for greetings
-    - Detect language
-    - Translate to English
-    - Check if related to breast cancer
-    - Search FAQ, then KB, then fallback web search
-    - Translate answer back to user language
+    Answer query using a clear three-step fallback: FAQ → KB → Web.
+    Only one is used per query (no mixing).
+    If return_kb_only=True, returns (context, source_type)
     """
-    # 👋 Step 1: Greeting detection
-    greeting_words = {
-        "hi", "hello", "hey",
-        "salut", "bonjour",
-        "مرحبا", "السلام عليكم", "أهلا", "أهلاً", "أهلا وسهلا", "عسلامة"
-    }
-
+    # Step 1: Greeting
+    greeting_words = {"hi", "hello", "hey", "salut", "bonjour", "مرحبا", "السلام عليكم", "أهلا", "أهلاً", "أهلا وسهلا", "عسلامة"}
     greetings_map = {
         "ar": "👋 مرحبًا! أنا هنا لتقديم معلومات ودعم حول سرطان الثدي. اسألني ما تشاء.",
         "fr": "👋 Bonjour ! Je suis là pour vous informer et vous soutenir sur le cancer du sein. Posez-moi vos questions.",
@@ -96,41 +92,44 @@ def answer_query(query: str) -> str:
 
     query_lower = query.lower()
     if any(word in query_lower for word in greeting_words):
-        greet_lang = detect_greeting_language(query)
-        if greet_lang is None:
-            greet_lang = detect_language(query)  # fallback
-        return greetings_map.get(greet_lang, greetings_map["en"])
+        lang = detect_greeting_language(query) or detect_language(query)
+        greeting = greetings_map.get(lang, greetings_map["en"])
+        return (greeting, "greeting") if return_kb_only else greeting
 
-    # 🌍 Step 2: Language detection
+    # Step 2: Translate to English
     lang = detect_language(query)
     query_en = translate_to_english(query, lang)
 
-    # 🚫 Step 3: Is it about breast cancer?
+    # Step 3: Breast cancer relevance check
     if not is_breast_cancer_related(query_en):
-        return {
+        reason = {
             "ar": "❌ أستطيع فقط الإجابة على الأسئلة المتعلقة بسرطان الثدي.",
             "fr": "❌ Je ne peux répondre qu'aux questions sur le cancer du sein.",
         }.get(lang, "❌ I can only answer questions about breast cancer.")
+        return (reason, "not_relevant") if return_kb_only else reason
 
-    # ✅ Step 4: Try FAQ
+    # Step 4: Try FAQ
     faq_answer = search_faq(query_en)
     if faq_answer:
-        response = faq_answer if lang == "en" else translate_from_english(faq_answer, lang)
-        return f"✅ FAQ: {response}\n\n{('(اسأل المزيد إذا أردت!)' if lang == 'ar' else 'N’hésitez pas à poser plus de questions !' if lang == 'fr' else 'Ask more if you like!')}"
+        if return_kb_only:
+            return (faq_answer, "faq")
+        translated = faq_answer if lang == "en" else translate_from_english(faq_answer, lang)
+        return f"✅ FAQ: {translated}\n\n{('اسأل المزيد إذا أردت!' if lang == 'ar' else 'N’hésitez pas à poser plus de questions !' if lang == 'fr' else 'Ask more if you like!')}"
 
-    # 📚 Step 5: Try KB
+    # Step 5: Try KB
     kb_hits = search_kb(query_en)
     if kb_hits:
         context = "\n\n---\n\n".join(f"[{h['source']} | sim={h['sim']:.3f}]\n{h['chunk']}" for h in kb_hits)
-        kb_response_en = ask_llm_with_context(query_en, context, lang="en")
-        if "don't have the answer" not in kb_response_en.lower():
-            final_answer = translate_from_english(kb_response_en, lang) if lang != "en" else kb_response_en
-            return f"📚 KB-based: {final_answer}\n\n{('(مزيد من التفاصيل؟)' if lang == 'ar' else 'Besoin de plus de détails ?' if lang == 'fr' else 'Need more detail?')}"
+        if return_kb_only:
+            return (context, "kb")
+        kb_response_en = ask_llm_with_context(query_en, context)
+        final = translate_from_english(kb_response_en, lang) if lang != "en" else kb_response_en
+        return f"📚 KB: {final}"
 
-    # 🌐 Step 6: Fallback search
-    print ("searching the web ")
-    fallback_response_en = asyncio.run(search_agent_fallback(query_en))
-    fallback_response = translate_from_english(fallback_response_en, lang) if lang != "en" else fallback_response_en
-    print("Registering fallback in KB...")
-    register_search_in_kb(query_en, fallback_response_en, source="search_agent_fallback")
-    return fallback_response
+    # Step 6: Web Search (last resort)
+    web_fallback_en = asyncio.run(search_agent_fallback(query_en))
+    if return_kb_only:
+        return (web_fallback_en, "web")
+    final = translate_from_english(web_fallback_en, lang) if lang != "en" else web_fallback_en
+    register_search_in_kb(query_en, web_fallback_en, source="search_agent_fallback")
+    return f"🌐 Web: {final}"

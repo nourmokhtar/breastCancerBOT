@@ -76,22 +76,18 @@ def register_search_in_kb(query, answer, source="search_agent_fallback"):
     except Exception as e:
         print(f"❌ Failed to upsert into Qdrant: {e}")
 
-async def search_agent_fallback(query, max_links=3):
-    links = search_serper(query)
-    if not links:
-        return "Sorry, no online info found."
+async def search_agent_fallback(query: str) -> str:
+    system_prompt = "You are a helpful assistant specializing in breast cancer information. Answer using known medical facts. If unsure, say so."
+    user_message = f"The user asked: {query}"
 
-    from llm_client import llm  # import here to avoid circular
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_message}
+    ]
 
-    for link in links[:max_links]:
-        content = await fetch_text(link)
-        if not content:
-            continue
-        messages = [
-            {"type": "system", "content": "You are compassionate assistant knowledgeable about breast cancer and mental health support. respond with clear answers that arent too long "},
-            {"type": "user", "content": f"Question: {query}\n\nContent:\n{content[:15000]}"}
-        ]
-        answer = llm(messages)
-        if answer.strip():
-            return f"\n{answer}"
-    return "Sorry, couldn't extract a good answer from the web."
+    try:
+        response = llm(messages)
+        return response
+    except Exception as e:
+        print(f"❌ Fallback LLM failed: {e}")
+        return "I couldn’t find a reliable answer at the moment. Please consult a medical professional."

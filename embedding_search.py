@@ -44,6 +44,7 @@ def search_kb(query, top_k=3):
 
     try:
         hits = qdrant_client.search(
+            
             collection_name=DOCS_COLLECTION,
             query_vector=query_vector.tolist(),
             limit=top_k,
@@ -74,21 +75,3 @@ def search_kb(query, top_k=3):
     except Exception as e:
         print(f"❌ Qdrant search failed: {e}")
         return []
-
-
-if __name__ == "__main__":
-    print("Testing FAQ search...")
-    faq_result = search_faq("What are the symptoms of breast cancer?")
-    print("FAQ result:", faq_result)
-
-    print("\nTesting KB search...")
-    kb_results = search_kb("What are the symptoms of breast cancer?")
-    print("KB results:", kb_results)
-
-    print("\nSample FAQ payload:")
-    faq_points, _ = qdrant_client.scroll(collection_name=FAQ_COLLECTION, limit=1, with_payload=True)
-    print(faq_points[0].payload if faq_points else "No points found.")
-
-    print("\nSample KB payload:")
-    kb_points, _ = qdrant_client.scroll(collection_name=DOCS_COLLECTION, limit=1, with_payload=True)
-    print(kb_points[0].payload if kb_points else "No points found.")
