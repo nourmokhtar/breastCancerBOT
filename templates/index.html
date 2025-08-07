@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Virtual Assistant</title>
+</head>
+<body>
+    <h1>Mental Health Assistant</h1>
+
+    <textarea id="userInput" rows="4" cols="50" placeholder="How are you feeling?"></textarea><br>
+    <button onclick="analyze()">Submit</button>
+
+    <button onclick="startVoice()">🎤 Speak</button>
+    <button onclick="stopVoice()">🛑 Stop</button>
+
+    <h3>Detected Emotions (Text):</h3>
+    <pre id="emotions">No emotion detected yet.</pre>
+
+    <h3>Voice Transcription:</h3>
+    <p id="transcription">No voice input yet.</p>
+
+    <h3>LLM Text Response:</h3>
+    <p id="textResponse">No response yet.</p>
+
+    <h3>LLM Audio Response:</h3>
+    <audio id="responseAudio" controls style="display:none;"></audio>
+    <button id="replayBtn" onclick="replayAudio()" style="display:none;">🔁 Replay</button>
+
+    <h3>Select Camera:</h3>
+    <select id="cameraSelect"></select>
+
+    <h3>Live Emotion Detection (Webcam)</h3>
+    <video id="videoFeed" width="480" height="360" autoplay muted></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <!-- External scripts -->
+    <script src="{{ url_for('static', filename='scripts/text_analysis.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='scripts/camera.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='scripts/face_analysis.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='scripts/voice.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='scripts/chat.js') }}" defer></script>
+
+
+    <script>
+        // To be called after audio generation
+        function updateAudioResponse(audioFilename) {
+            const audioElement = document.getElementById("responseAudio");
+            const replayBtn = document.getElementById("replayBtn");
+            audioElement.src = `/static/${audioFilename}`;
+            audioElement.style.display = "block";
+            replayBtn.style.display = "inline-block";
+            audioElement.play().catch(e => {
+                console.warn("🔇 Audio playback failed:", e);
+            });
+        }
+
+        function replayAudio() {
+            const audio = document.getElementById("responseAudio");
+            audio.currentTime = 0;
+            audio.play();
+        }
+    </script>
+</body>
+</html>

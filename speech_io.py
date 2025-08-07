@@ -31,7 +31,9 @@ def text_to_speech(text, lang):
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
             tts = gTTS(text=text, lang=lang)
             tts.save(tmp_file.name)
+            
             playsound(tmp_file.name)
+                
         os.remove(tmp_file.name)
     except Exception as e:
         print(f"⚠️ Text-to-speech error: {e}")
