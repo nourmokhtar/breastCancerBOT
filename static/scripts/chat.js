@@ -30,7 +30,13 @@ async function analyze() {
         // Display assistant's text reply
         textResponse.innerText = data.response || "🤖 No response.";
 
-        // (Optional) Play TTS response here if you add that later
+        // Play TTS response if server returned audio
+        if (data.audio_url) {
+            const audioPlayer = document.getElementById("responseAudio");
+            audioPlayer.src = data.audio_url + "?t=" + Date.now();
+            audioPlayer.style.display = "block";
+            try { await audioPlayer.play(); } catch (_) {}
+        }
 
     } catch (err) {
         console.error("❌ Error:", err);
