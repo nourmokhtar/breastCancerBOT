@@ -2,9 +2,35 @@
 
 A Retrieval-Augmented Generation (RAG) AI assistant for breast cancer information and support, powered by Qdrant and web search fallback.
 
+## 🧠 Mental Health Support
+
+**Important Mental Health Statement:**
+
+This chatbot is designed to provide information and emotional support for individuals affected by breast cancer. However, it is **NOT a substitute for professional medical or mental health care**.
+
+- 🤝 **Emotional Support**: The chatbot can provide comfort, information, and a listening ear during difficult times
+- 🎭 **Emotion Detection**: Real-time emotion analysis from voice and facial expressions to better understand your emotional state
+- 💬 **Conversational Support**: Natural conversations to help you feel heard and supported
+- 📚 **Educational Resources**: Reliable information about breast cancer to reduce anxiety and uncertainty
+
+**If you're experiencing severe emotional distress, please reach out to:**
+- Your healthcare provider
+- A licensed mental health professional
+- Crisis helplines in your area
+- Support groups for breast cancer patients and survivors
+
+**Remember**: You're not alone, and it's okay to seek professional help when needed.
+
 ---
 
 ## 🚀 Quick Start
+
+### Prerequisites
+
+**⚠️ Important: This project requires Python < 11**
+- **Recommended**: Python 10.x (personally tested and working)
+- **Supported**: Python 3.8 - 3.10
+- **Not supported**: Python 11+ (due to compatibility issues with some dependencies)
 
 ### 1. Clone the repository
 ```bash
@@ -12,22 +38,39 @@ git clone https://github.com/hejerayadi/chatbot.git
 cd chatbot
 ```
 
-### 2. Create and activate a virtual environment
+### 2. Check your Python version
 ```bash
-python -m venv venv
-venv\Scripts\activate  # On Windows
-# or
-source venv/bin/activate  #py  On macOS/Linux
+python --version
+# Should show Python 3.x.x where x < 11
 ```
 
-### 3. Install dependencies
+### 3. Create and activate a virtual environment
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+
+# On macOS/Linux:
+source venv/bin/activate
+```
+
+### 4. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Set up environment variables
-Create a `.env` file in the project root with your API keys and Qdrant URL. Example:
+**Note**: If you encounter any installation errors, try upgrading pip first:
+```bash
+pip install --upgrade pip
 ```
+
+### 5. Set up environment variables
+Create a `.env` file in the project root with your API keys and Qdrant URL:
+
+```env
 TOGETHER_API_KEY=your_together_api_key
 QDRANT_URL=https://your-qdrant-url
 QDRANT_API_KEY=your_qdrant_api_key
@@ -36,20 +79,24 @@ QDRANT_FAQ_COLLECTION=faq_collection
 SERPER_API_KEY=your_serper_api_key
 ```
 
----
+**Required API Keys:**
+- **TOGETHER_API_KEY**: Get from [Together AI](https://together.ai/)
+- **QDRANT_URL & QDRANT_API_KEY**: Get from [Qdrant Cloud](https://cloud.qdrant.io/)
+- **SERPER_API_KEY**: Get from [Serper](https://serper.dev/) (optional, for web search fallback)
 
-
-
-### 5. Index your knowledge base (run once, or when KB changes)
+### 6. Index your knowledge base (run once, or when KB changes)
 ```bash
 python vectorStore__hajer.py
 ```
-*(or the appropriate script for your KB indexing)*
 
-### 6. Start the chatbot
+This will create the vector database with your FAQ and knowledge base documents.
+
+### 7. Start the chatbot
 ```bash
-python main.py
+python api.py
 ```
+
+The application will start on `http://localhost:5000`
 
 ---
 
@@ -74,11 +121,55 @@ python main.py
 
 ## 💡 Features
 
-- Multilingual support (English, Arabic, French)
-- Semantic search with Qdrant vector database
-- Web search fallback for new/unseen questions
-- Automatic knowledge base enrichment
-- Voice and text input modes
+- **Multilingual support** (English, Arabic, French)
+- **Voice and text input** modes with emotion detection
+- **Semantic search** with Qdrant vector database
+- **Web search fallback** for new/unseen questions
+- **Automatic knowledge base enrichment**
+- **Real-time emotion detection** from voice and facial expressions
+- **Text-to-speech** with dynamic accent matching based on detected language
+
+---
+
+## 🔧 Troubleshooting
+
+### Common Issues:
+
+1. **Python Version Error**
+   ```
+   Error: This project requires Python < 11
+   ```
+   **Solution**: Use Python 10.x or earlier
+
+2. **Installation Errors**
+   ```
+   Error: Failed to install some packages
+   ```
+   **Solution**: 
+   ```bash
+   pip install --upgrade pip
+   pip install -r requirements.txt --no-cache-dir
+   ```
+
+3. **Missing API Keys**
+   ```
+   Error: TOGETHER_API_KEY not found
+   ```
+   **Solution**: Make sure your `.env` file is in the project root and contains all required API keys
+
+4. **Qdrant Connection Error**
+   ```
+   Error: Could not connect to Qdrant
+   ```
+   **Solution**: Check your QDRANT_URL and QDRANT_API_KEY in the `.env` file
+
+### Getting Help:
+
+If you encounter any issues:
+1. Check that you're using Python < 11
+2. Ensure all dependencies are installed correctly
+3. Verify your `.env` file is properly configured
+4. Check the console output for specific error messages
 
 ---
 
@@ -87,6 +178,7 @@ python main.py
 - Make sure your `.env` file is set up with all required API keys.
 - The chatbot will automatically expand its knowledge base as users ask new questions.
 - For best results, keep your knowledge base and FAQ up to date.
+- The application supports both voice and text input with real-time emotion detection.
 
 ---
 
