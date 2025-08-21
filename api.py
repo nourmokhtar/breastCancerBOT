@@ -4,24 +4,47 @@ from speech_io import transcribe_audio_file, text_to_speech, transcribe_live
 from translation import detect_language, translate_to_english, translate_from_english
 from grammar_correction import correct_grammar
 from llm_client import llm
-from tensorflow.keras.models import load_model
-from keras.preprocessing.image import img_to_array
-import cv2
+# from tensorflow.keras.models import load_model
+# from keras.preprocessing.image import img_to_array
+# import cv2
 import os
 import base64
 import numpy as np
 from voice_emotion import detect_voice_emotion
 from text_to_speech import synthesize_speech
 import whisper
+from main import zep_client, get_zep_history, save_zep_message, clear_zep_memory, build_history_for_llm, show_recap
+from dotenv import load_dotenv
+load_dotenv()
 
 
 
 app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
-face_classifier = cv2.CascadeClassifier('models/Emotion_Detection_CNN/haarcascade_frontalface_default.xml')
-model = load_model('models/Emotion_Detection_CNN/model.h5')
-emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
+
+# Commented out models
+# face_classifier = cv2.CascadeClassifier('models/Emotion_Detection_CNN/haarcascade_frontalface_default.xml')
+# model = load_model('models/Emotion_Detection_CNN/model.h5')
+# emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
 
 conversation_history = []
+
+@app.route("/zep_test")
+def zep_test():
+    if not zep_client:
+        return jsonify({"status": "fallback", "msg": "⚠️ Zep client not initialized. Using local storage."})
+
+    try:
+        # try a roundtrip
+        save_zep_message("system", "Zep test message")
+        hist = get_zep_history()
+        return jsonify({
+            "status": "ok",
+            "msg": "✅ Zep client connected.",
+            "history_sample": hist[-3:]  # last few msgs to confirm
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "msg": str(e)})
+
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
@@ -30,20 +53,16 @@ def process_query_with_language(user_input, detected_lang):
     """Process query using a pre-detected language (e.g., from Whisper)"""
     global conversation_history
     
-    # Use the provided language and normalize it
     lang = detected_lang
-    
-    # Normalize language code to ensure consistency
     if lang and "-" not in lang:
-        # Add region code for better accent matching
         if lang == "en":
-            lang = "en-us"  # Default to US English for text input
+            lang = "en-us"
         elif lang == "fr":
-            lang = "fr-fr"  # Default to French French
+            lang = "fr-fr"
         elif lang == "es":
-            lang = "es-es"  # Default to Spanish Spanish
+            lang = "es-es"
         elif lang == "ar":
-            lang = "ar-sa"  # Default to Saudi Arabic
+            lang = "ar-sa"
     
     print(f"🌍 Using provided language: {detected_lang} -> normalized: {lang}")
     
@@ -58,22 +77,18 @@ def process_query(user_input):
     except:
         lang = "en"
     
-    # Normalize language code to ensure consistency
     if lang and "-" not in lang:
-        # Add region code for better accent matching
         if lang == "en":
-            lang = "en-us"  # Default to US English for text input
+            lang = "en-us"
         elif lang == "fr":
-            lang = "fr-fr"  # Default to French French
+            lang = "fr-fr"
         elif lang == "es":
-            lang = "es-es"  # Default to Spanish Spanish
+            lang = "es-es"
         elif lang == "ar":
-            lang = "ar-sa"  # Default to Saudi Arabic
+            lang = "ar-sa"
     
     return _process_query_internal(user_input, lang)
-
 def _process_query_internal(user_input, lang):
-
     try:
         if lang in ["en", "fr", "ar"]:
             user_input = correct_grammar(user_input, lang)
@@ -87,25 +102,31 @@ def _process_query_internal(user_input, lang):
         print(f"⚠️ Translation to English failed: {e}")
         user_input_en = user_input
 
-    conversation_history.append({"role": "user", "content": user_input_en})
+    # ✅ Save user message
+    save_zep_message("user", user_input_en)
+
+    # ✅ Get history for LLM
+    conversation_history = build_history_for_llm()
 
     if not any(msg["role"] == "system" for msg in conversation_history):
-        conversation_history.insert(0, {
+        system_prompt = {
             "role": "system",
-            "content": "You are a kind and helpful assistant for breast cancer patients. Answer clearly, supportively, and based on known facts or provided context. If you don’t know, say so."
-        })
+            "content": "You are a kind and helpful assistant for breast cancer patients. "
+                       "Answer clearly, supportively, and based on known facts or provided context. "
+                       "If you don’t know, say so."
+        }
+        save_zep_message("system", system_prompt["content"])
+        conversation_history.insert(0, system_prompt)
 
-    # 🔍 Context
     context_text, source_type = answer_query(user_input_en, return_kb_only=True)
 
     print(f"\n📤 Retrieved from: {source_type.upper() if source_type else 'UNKNOWN'}")
     print(f"📚 Context:\n{context_text if context_text else '(No context)'}\n")
 
     if context_text and source_type not in ["greeting", "not_relevant"]:
-        conversation_history.append({
-            "role": "system",
-            "content": f"Relevant knowledge ({source_type}):\n{context_text}"
-        })
+        knowledge = f"Relevant knowledge ({source_type}):\n{context_text}"
+        save_zep_message("system", knowledge)
+        conversation_history.append({"role": "system", "content": knowledge})
 
     try:
         response_en = llm(conversation_history)
@@ -113,7 +134,8 @@ def _process_query_internal(user_input, lang):
         print(f"❌ LLM error: {e}")
         response_en = "Sorry, I encountered an issue answering that."
 
-    conversation_history.append({"role": "assistant", "content": response_en})
+    # ✅ Save assistant response
+    save_zep_message("assistant", response_en)
 
     try:
         response_local = translate_from_english(response_en, lang)
@@ -133,19 +155,16 @@ def analyze_voice():
         return jsonify({"error": "Empty filename"}), 400
 
     UPLOAD_FOLDER = "uploads"
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Assure que le dossier existe
-
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     filepath = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(filepath)
 
-    # Check file size
     if os.stat(filepath).st_size < 10_000:
         return jsonify({"error": "Audio file too short or empty"}), 400
 
     try:
         print("🔍 Loading Whisper base model...")
-        model = whisper.load_model("base")  # or "tiny" for speed
-
+        model = whisper.load_model("base")
         print("🗣️ Transcribing audio...")
         result = model.transcribe(filepath, task="transcribe", language=None)
 
@@ -162,7 +181,6 @@ def analyze_voice():
         emotion_result = detect_voice_emotion(filepath)
         emotion_label = emotion_result.get("emotion")
         confidence_str = str(emotion_result.get("confidence", "0")).strip()
-        # Normalize confidence to a numeric value (no percent sign)
         if confidence_str.endswith("%"):
             confidence_str = confidence_str[:-1]
         try:
@@ -170,24 +188,17 @@ def analyze_voice():
         except ValueError:
             confidence_val = 0.0
 
-        # 🤖 Full RAG pipeline with Whisper language detection
-        # Use Whisper's language detection instead of langdetect for voice input
         if language and language != "unknown":
-            # Use Whisper's detected language for processing
             reply, lang_local = process_query_with_language(transcription, language)
         else:
-            # Fallback to normal language detection
             reply, lang_local = process_query(transcription)
         
         print(f"💬 LLM Response: {reply}")
 
-        # 🔊 Text-to-Speech (gTTS outputs mp3)
-        # Use Whisper-detected language for better accent matching
         audio_output_path = os.path.join("static", "llm_response.mp3")
-        print(f"[Whisper] Detected language: {language} | RAG language: {lang_local}")
-        # Use Whisper language for TTS to get better accent matching
         tts_language = language if language and language != "unknown" else lang_local
         synthesize_speech(reply, lang_code=tts_language, output_path=audio_output_path)
+
         return jsonify({
             "transcription": transcription,
             "language": language,
@@ -197,25 +208,44 @@ def analyze_voice():
             "audio_url": "/static/llm_response.mp3"
         })
 
-
     except Exception as e:
         print(f"❌ Error in voice emotion detection: {e}")
         return jsonify({"error": str(e)}), 500
     
+
+@app.route("/recap", methods=["GET"])
+def recap():
+    msgs = get_zep_history()
+    if not msgs:
+        return jsonify({"recap": "No conversation history."})
+
+    recap_lines = []
+    for m in msgs:
+        role = (m.get("role") or "").lower()
+        content = m.get("content", "")
+        who = "You" if role == "user" else "Assistant" if role == "assistant" else "System"
+        recap_lines.append(f"{who}: {content}")
+
+    return jsonify({"recap": "\n".join(recap_lines)})
+
+
+@app.route("/clear_history", methods=["POST"])
+def clear_history():
+    success = clear_zep_memory()
+    return jsonify({"cleared": success})
+
+
 @app.route("/api/query", methods=["POST"])
 def handle_query():
     data = request.json
     user_input = data.get("message", "").strip()
-
     if not user_input:
         return jsonify({"error": "Empty input"}), 400
 
     reply, lang = process_query(user_input)
 
-    # Synthesize TTS for text-submitted queries as well
     audio_output_path = os.path.join("static", "llm_response.mp3")
     try:
-        # Use the normalized language code for better accent matching
         synthesize_speech(reply, lang_code=lang, output_path=audio_output_path)
         audio_url = "/static/llm_response.mp3"
     except Exception as e:
@@ -228,58 +258,14 @@ def handle_query():
         "audio_url": audio_url
     })
 
-
 @app.route("/chat")
 def chat_interface():
     return render_template("index.html")
 
-@app.route('/analyze_frame', methods=['POST'])
-def analyze_frame():
-    data = request.get_json()
-    image_data = data.get("image", "")
-    
-    if not image_data:
-        return jsonify({"error": "No image data provided"}), 400
+# Commented out frame analysis (depends on models)
+# @app.route('/analyze_frame', methods=['POST'])
+# def analyze_frame():
+#     return jsonify({"error": "Frame analysis is disabled (models commented out)"}), 501
 
-    try:
-        image_data = image_data.split(",")[1]  # Remove base64 header
-        image_bytes = base64.b64decode(image_data)
-        np_arr = np.frombuffer(image_bytes, np.uint8)
-        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-
-        # Detect faces
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = face_classifier.detectMultiScale(gray, 1.3, 5)
-
-        if len(faces) == 0:
-            print("⚠️ No face detected in frame.")
-            return jsonify({"results": []})
-
-        for (x, y, w, h) in faces:
-            roi = gray[y:y+h, x:x+w]
-            roi = cv2.resize(roi, (48, 48))
-            roi = roi.astype("float") / 255.0
-            roi = img_to_array(roi)
-            roi = np.expand_dims(roi, axis=0)
-
-            prediction = model.predict(roi)[0]
-            emotion_index = np.argmax(prediction)
-            emotion_label = emotion_labels[emotion_index]
-            confidence = float(np.max(prediction)) * 100
-
-            print(f"🎯 Emotion Detected: {emotion_label} ({confidence:.2f}%)")
-
-            return jsonify({
-                "results": [
-                    {
-                        "label": emotion_label,
-                        "confidence": f"{confidence:.2f}"
-                    }
-                ]
-            })
-
-    except Exception as e:
-        print(f"❌ Error analyzing frame: {e}")
-        return jsonify({"error": "Failed to process image"}), 500
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)

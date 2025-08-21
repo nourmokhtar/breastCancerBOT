@@ -3,6 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <title>Virtual Assistant</title>
+    <style>
+        #historyModal {
+            display: none;
+            position: fixed;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fff;
+            border: 2px solid #333;
+            padding: 20px;
+            width: 60%;
+            max-height: 70%;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+        #historyModal h2 {
+            margin-top: 0;
+        }
+        #closeModal {
+            float: right;
+            cursor: pointer;
+            font-size: 18px;
+            color: red;
+        }
+        #overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 900;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
 </head>
 <body>
     <h1>Mental Health Assistant</h1>
@@ -12,6 +50,57 @@
 
     <button onclick="startVoice()">🎤 Speak</button>
     <button onclick="stopVoice()">🛑 Stop</button>
+    <!-- Conversation History Section -->
+   
+    <button onclick="showHistory()">📜 Conversation History</button>
+
+    <!-- History Modal -->
+    <div id="overlay"></div>
+    <div id="historyModal">
+        <span id="closeModal" onclick="closeHistory()">✖</span>
+        <h2>Conversation History</h2>
+        <pre id="historyContent">Loading...</pre>
+        <button onclick="clearHistory()">🗑️ Clear History</button>
+    </div>
+
+    <script>
+        // Show modal and fetch conversation history
+        function showHistory() {
+            document.getElementById("overlay").style.display = "block";
+            document.getElementById("historyModal").style.display = "block";
+
+            fetch("/recap")
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("historyContent").textContent = data.recap || "No conversation history.";
+            })
+            .catch(err => {
+                document.getElementById("historyContent").textContent = "⚠️ Error loading history.";
+            });
+        }
+
+        // Close modal
+        function closeHistory() {
+            document.getElementById("overlay").style.display = "none";
+            document.getElementById("historyModal").style.display = "none";
+        }
+
+        // Clear conversation history
+        function clearHistory() {
+            fetch("/clear_history", { method: "POST" })
+            .then(res => res.json())
+            .then(data => {
+                if (data.cleared) {
+                    document.getElementById("historyContent").textContent = "✅ History cleared.";
+                } else {
+                    document.getElementById("historyContent").textContent = "⚠️ Failed to clear history.";
+                }
+            })
+            .catch(err => {
+                document.getElementById("historyContent").textContent = "⚠️ Error clearing history.";
+            });
+        }
+    </script>
 
     <h3>Detected Emotions (Text):</h3>
     <pre id="emotions">No emotion detected yet.</pre>
@@ -33,13 +122,25 @@
     <video id="videoFeed" width="480" height="360" autoplay muted></video>
     <canvas id="canvas" style="display:none;"></canvas>
 
+    <!-- New Button for Conversation History -->
+    <hr>
+    <button onclick="showHistory()">📜 Conversation History</button>
+
+    <!-- History Modal -->
+    <div id="overlay"></div>
+    <div id="historyModal">
+        <span id="closeModal" onclick="closeHistory()">✖</span>
+        <h2>Conversation History</h2>
+        <pre id="historyContent">Loading...</pre>
+        <button onclick="clearHistory()">🗑️ Clear History</button>
+    </div>
+
     <!-- External scripts -->
     <script src="{{ url_for('static', filename='scripts/text_analysis.js') }}" defer></script>
     <script src="{{ url_for('static', filename='scripts/camera.js') }}" defer></script>
     <script src="{{ url_for('static', filename='scripts/face_analysis.js') }}" defer></script>
     <script src="{{ url_for('static', filename='scripts/voice.js') }}" defer></script>
     <script src="{{ url_for('static', filename='scripts/chat.js') }}" defer></script>
-
 
     <script>
         // To be called after audio generation
@@ -58,6 +159,40 @@
             const audio = document.getElementById("responseAudio");
             audio.currentTime = 0;
             audio.play();
+        }
+
+        // --- History modal functions ---
+        function showHistory() {
+            document.getElementById("overlay").style.display = "block";
+            document.getElementById("historyModal").style.display = "block";
+            fetch("/recap")
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById("historyContent").textContent = data.recap || "No conversation history.";
+                })
+                .catch(err => {
+                    document.getElementById("historyContent").textContent = "⚠️ Error loading history.";
+                });
+        }
+
+        function closeHistory() {
+            document.getElementById("overlay").style.display = "none";
+            document.getElementById("historyModal").style.display = "none";
+        }
+
+        function clearHistory() {
+            fetch("/clear_history", {method: "POST"})
+                .then(res => res.json())
+                .then(data => {
+                    if (data.cleared) {
+                        document.getElementById("historyContent").textContent = "✅ History cleared.";
+                    } else {
+                        document.getElementById("historyContent").textContent = "⚠️ Failed to clear history.";
+                    }
+                })
+                .catch(err => {
+                    document.getElementById("historyContent").textContent = "⚠️ Error clearing history.";
+                });
         }
     </script>
 </body>
