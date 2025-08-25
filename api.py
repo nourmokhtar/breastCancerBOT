@@ -1,32 +1,46 @@
 from flask import Flask, request, jsonify, render_template
-from query_handler import answer_query
+from query_handler import answer_query, ask_llm_with_context
 from speech_io import transcribe_audio_file, text_to_speech, transcribe_live
 from translation import detect_language, translate_to_english, translate_from_english
 from grammar_correction import correct_grammar
 from llm_client import llm
-# from tensorflow.keras.models import load_model
-# from keras.preprocessing.image import img_to_array
-# import cv2
+from tensorflow.keras.models import load_model
+from keras.preprocessing.image import img_to_array
+import cv2
 import os
 import base64
 import numpy as np
+import threading
+import whisper
 from voice_emotion import detect_voice_emotion
 from text_to_speech import synthesize_speech
-import whisper
-from main import zep_client, get_zep_history, save_zep_message, clear_zep_memory, build_history_for_llm, show_recap
+from main import (
+    zep_client, get_zep_history, save_zep_message, clear_zep_memory,
+    build_history_for_llm, show_recap
+)
 from dotenv import load_dotenv
+
 load_dotenv()
-
-
 
 app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
 
-# Commented out models
-# face_classifier = cv2.CascadeClassifier('models/Emotion_Detection_CNN/haarcascade_frontalface_default.xml')
-# model = load_model('models/Emotion_Detection_CNN/model.h5')
-# emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
+face_classifier = cv2.CascadeClassifier('models/Emotion_Detection_CNN/haarcascade_frontalface_default.xml')
+model = load_model('models/Emotion_Detection_CNN/model.h5')
+emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
 
 conversation_history = []
+
+# -------------------------------
+# Helper for async TTS
+# -------------------------------
+def generate_tts_async(reply, lang_code, output_path):
+    """Run TTS in background"""
+    try:
+        synthesize_speech(reply, lang_code=lang_code, output_path=output_path)
+        print(f"✅ TTS ready: {output_path}")
+    except Exception as e:
+        print(f"❌ TTS generation failed: {e}")
+
 
 @app.route("/zep_test")
 def zep_test():
@@ -34,23 +48,26 @@ def zep_test():
         return jsonify({"status": "fallback", "msg": "⚠️ Zep client not initialized. Using local storage."})
 
     try:
-        # try a roundtrip
         save_zep_message("system", "Zep test message")
         hist = get_zep_history()
         return jsonify({
             "status": "ok",
             "msg": "✅ Zep client connected.",
-            "history_sample": hist[-3:]  # last few msgs to confirm
+            "history_sample": hist[-3:]
         })
     except Exception as e:
         return jsonify({"status": "error", "msg": str(e)})
+
 
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
 
+
+# -------------------------------
+# Query Processing
+# -------------------------------
 def process_query_with_language(user_input, detected_lang):
-    """Process query using a pre-detected language (e.g., from Whisper)"""
     global conversation_history
     
     lang = detected_lang
@@ -67,6 +84,7 @@ def process_query_with_language(user_input, detected_lang):
     print(f"🌍 Using provided language: {detected_lang} -> normalized: {lang}")
     
     return _process_query_internal(user_input, lang)
+
 
 def process_query(user_input):
     global conversation_history
@@ -88,6 +106,8 @@ def process_query(user_input):
             lang = "ar-sa"
     
     return _process_query_internal(user_input, lang)
+
+
 def _process_query_internal(user_input, lang):
     try:
         if lang in ["en", "fr", "ar"]:
@@ -102,10 +122,8 @@ def _process_query_internal(user_input, lang):
         print(f"⚠️ Translation to English failed: {e}")
         user_input_en = user_input
 
-    # ✅ Save user message
     save_zep_message("user", user_input_en)
 
-    # ✅ Get history for LLM
     conversation_history = build_history_for_llm()
 
     if not any(msg["role"] == "system" for msg in conversation_history):
@@ -123,18 +141,17 @@ def _process_query_internal(user_input, lang):
     print(f"\n📤 Retrieved from: {source_type.upper() if source_type else 'UNKNOWN'}")
     print(f"📚 Context:\n{context_text if context_text else '(No context)'}\n")
 
-    if context_text and source_type not in ["greeting", "not_relevant"]:
-        knowledge = f"Relevant knowledge ({source_type}):\n{context_text}"
-        save_zep_message("system", knowledge)
-        conversation_history.append({"role": "system", "content": knowledge})
+    if source_type in ["faq", "kb"]:
+        try:
+            response_en = ask_llm_with_context(user_input_en, context_text)
+        except Exception as e:
+            print(f"❌ Error in ask_llm_with_context: {e}")
+            response_en = "Sorry, I encountered an issue answering that."
+    elif source_type == "web":
+        response_en = context_text
+    else:
+        response_en = context_text
 
-    try:
-        response_en = llm(conversation_history)
-    except Exception as e:
-        print(f"❌ LLM error: {e}")
-        response_en = "Sorry, I encountered an issue answering that."
-
-    # ✅ Save assistant response
     save_zep_message("assistant", response_en)
 
     try:
@@ -145,6 +162,10 @@ def _process_query_internal(user_input, lang):
 
     return response_local, lang
 
+
+# -------------------------------
+# Voice Analysis + TTS
+# -------------------------------
 @app.route("/analyze_voice", methods=["POST"])
 def analyze_voice():
     if "file" not in request.files:
@@ -177,7 +198,6 @@ def analyze_voice():
         print(f"📜 Transcription: {transcription}")
         print(f"🌐 Detected Language: {language}")
 
-        # 🎭 Emotion Detection
         emotion_result = detect_voice_emotion(filepath)
         emotion_label = emotion_result.get("emotion")
         confidence_str = str(emotion_result.get("confidence", "0")).strip()
@@ -197,7 +217,9 @@ def analyze_voice():
 
         audio_output_path = os.path.join("static", "llm_response.mp3")
         tts_language = language if language and language != "unknown" else lang_local
-        synthesize_speech(reply, lang_code=tts_language, output_path=audio_output_path)
+
+        # run TTS in background
+        threading.Thread(target=generate_tts_async, args=(reply, tts_language, audio_output_path)).start()
 
         return jsonify({
             "transcription": transcription,
@@ -211,8 +233,11 @@ def analyze_voice():
     except Exception as e:
         print(f"❌ Error in voice emotion detection: {e}")
         return jsonify({"error": str(e)}), 500
-    
 
+
+# -------------------------------
+# Conversation Utils
+# -------------------------------
 @app.route("/recap", methods=["GET"])
 def recap():
     msgs = get_zep_history()
@@ -235,6 +260,9 @@ def clear_history():
     return jsonify({"cleared": success})
 
 
+# -------------------------------
+# Text Query + TTS
+# -------------------------------
 @app.route("/api/query", methods=["POST"])
 def handle_query():
     data = request.json
@@ -245,27 +273,27 @@ def handle_query():
     reply, lang = process_query(user_input)
 
     audio_output_path = os.path.join("static", "llm_response.mp3")
-    try:
-        synthesize_speech(reply, lang_code=lang, output_path=audio_output_path)
-        audio_url = "/static/llm_response.mp3"
-    except Exception as e:
-        print(f"[TTS] Error in text query: {e}")
-        audio_url = None
+    threading.Thread(target=generate_tts_async, args=(reply, lang, audio_output_path)).start()
 
     return jsonify({
         "response": reply,
         "language": lang,
-        "audio_url": audio_url
+        "audio_url": "/static/llm_response.mp3"
     })
+
 
 @app.route("/chat")
 def chat_interface():
     return render_template("index.html")
 
-# Commented out frame analysis (depends on models)
-# @app.route('/analyze_frame', methods=['POST'])
-# def analyze_frame():
-#     return jsonify({"error": "Frame analysis is disabled (models commented out)"}), 501
 
+@app.route('/analyze_frame', methods=['POST'])
+def analyze_frame():
+    return jsonify({"error": "Frame analysis is disabled (models commented out)"}), 501
+
+
+# -------------------------------
+# Run App
+# -------------------------------
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)

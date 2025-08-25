@@ -19,15 +19,8 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
             z-index: 1000;
         }
-        #historyModal h2 {
-            margin-top: 0;
-        }
-        #closeModal {
-            float: right;
-            cursor: pointer;
-            font-size: 18px;
-            color: red;
-        }
+        #historyModal h2 { margin-top: 0; }
+        #closeModal { float: right; cursor: pointer; font-size: 18px; color: red; }
         #overlay {
             display: none;
             position: fixed;
@@ -36,22 +29,18 @@
             background: rgba(0,0,0,0.4);
             z-index: 900;
         }
-        pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
     </style>
 </head>
 <body>
     <h1>Mental Health Assistant</h1>
 
+    <!-- user input -->
     <textarea id="userInput" rows="4" cols="50" placeholder="How are you feeling?"></textarea><br>
-    <button onclick="analyze()">Submit</button>
+    <button onclick="sendQuery()">Submit</button>
 
     <button onclick="startVoice()">🎤 Speak</button>
     <button onclick="stopVoice()">🛑 Stop</button>
-    <!-- Conversation History Section -->
-   
     <button onclick="showHistory()">📜 Conversation History</button>
 
     <!-- History Modal -->
@@ -62,45 +51,6 @@
         <pre id="historyContent">Loading...</pre>
         <button onclick="clearHistory()">🗑️ Clear History</button>
     </div>
-
-    <script>
-        // Show modal and fetch conversation history
-        function showHistory() {
-            document.getElementById("overlay").style.display = "block";
-            document.getElementById("historyModal").style.display = "block";
-
-            fetch("/recap")
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById("historyContent").textContent = data.recap || "No conversation history.";
-            })
-            .catch(err => {
-                document.getElementById("historyContent").textContent = "⚠️ Error loading history.";
-            });
-        }
-
-        // Close modal
-        function closeHistory() {
-            document.getElementById("overlay").style.display = "none";
-            document.getElementById("historyModal").style.display = "none";
-        }
-
-        // Clear conversation history
-        function clearHistory() {
-            fetch("/clear_history", { method: "POST" })
-            .then(res => res.json())
-            .then(data => {
-                if (data.cleared) {
-                    document.getElementById("historyContent").textContent = "✅ History cleared.";
-                } else {
-                    document.getElementById("historyContent").textContent = "⚠️ Failed to clear history.";
-                }
-            })
-            .catch(err => {
-                document.getElementById("historyContent").textContent = "⚠️ Error clearing history.";
-            });
-        }
-    </script>
 
     <h3>Detected Emotions (Text):</h3>
     <pre id="emotions">No emotion detected yet.</pre>
@@ -112,7 +62,9 @@
     <p id="textResponse">No response yet.</p>
 
     <h3>LLM Audio Response:</h3>
+    <!-- hidden until ready -->
     <audio id="responseAudio" controls style="display:none;"></audio>
+    <button id="playVoiceBtn" onclick="playResponse()" style="display:none;">🔊 Play Response</button>
     <button id="replayBtn" onclick="replayAudio()" style="display:none;">🔁 Replay</button>
 
     <h3>Select Camera:</h3>
@@ -122,18 +74,8 @@
     <video id="videoFeed" width="480" height="360" autoplay muted></video>
     <canvas id="canvas" style="display:none;"></canvas>
 
-    <!-- New Button for Conversation History -->
     <hr>
     <button onclick="showHistory()">📜 Conversation History</button>
-
-    <!-- History Modal -->
-    <div id="overlay"></div>
-    <div id="historyModal">
-        <span id="closeModal" onclick="closeHistory()">✖</span>
-        <h2>Conversation History</h2>
-        <pre id="historyContent">Loading...</pre>
-        <button onclick="clearHistory()">🗑️ Clear History</button>
-    </div>
 
     <!-- External scripts -->
     <script src="{{ url_for('static', filename='scripts/text_analysis.js') }}" defer></script>
@@ -143,57 +85,189 @@
     <script src="{{ url_for('static', filename='scripts/chat.js') }}" defer></script>
 
     <script>
-        // To be called after audio generation
-        function updateAudioResponse(audioFilename) {
-            const audioElement = document.getElementById("responseAudio");
-            const replayBtn = document.getElementById("replayBtn");
-            audioElement.src = `/static/${audioFilename}`;
-            audioElement.style.display = "block";
-            replayBtn.style.display = "inline-block";
-            audioElement.play().catch(e => {
-                console.warn("🔇 Audio playback failed:", e);
-            });
-        }
+    // -------------- Helpers --------------
+    // Wait until the audio file exists and its Content-Length is stable across two checks.
+    async function waitForAudioStable(url, maxAttempts = 40, intervalMs = 300) {
+        let lastLen = null;
+        let stableCount = 0;
 
-        function replayAudio() {
-            const audio = document.getElementById("responseAudio");
-            audio.currentTime = 0;
-            audio.play();
-        }
-
-        // --- History modal functions ---
-        function showHistory() {
-            document.getElementById("overlay").style.display = "block";
-            document.getElementById("historyModal").style.display = "block";
-            fetch("/recap")
-                .then(res => res.json())
-                .then(data => {
-                    document.getElementById("historyContent").textContent = data.recap || "No conversation history.";
-                })
-                .catch(err => {
-                    document.getElementById("historyContent").textContent = "⚠️ Error loading history.";
-                });
-        }
-
-        function closeHistory() {
-            document.getElementById("overlay").style.display = "none";
-            document.getElementById("historyModal").style.display = "none";
-        }
-
-        function clearHistory() {
-            fetch("/clear_history", {method: "POST"})
-                .then(res => res.json())
-                .then(data => {
-                    if (data.cleared) {
-                        document.getElementById("historyContent").textContent = "✅ History cleared.";
+        for (let i = 0; i < maxAttempts; i++) {
+            try {
+                const resp = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+                if (resp.ok) {
+                    const lenStr = resp.headers.get('content-length');
+                    // if no content-length header, treat presence of 200 as some progress; require two consecutive OKs
+                    if (!lenStr) {
+                        stableCount++;
                     } else {
-                        document.getElementById("historyContent").textContent = "⚠️ Failed to clear history.";
+                        const len = Number(lenStr);
+                        if (!Number.isFinite(len) || len <= 200) {
+                            // file too small yet
+                            stableCount = 0;
+                        } else {
+                            if (lastLen === len) {
+                                stableCount++;
+                            } else {
+                                lastLen = len;
+                                stableCount = 0;
+                            }
+                        }
                     }
-                })
-                .catch(err => {
-                    document.getElementById("historyContent").textContent = "⚠️ Error clearing history.";
-                });
+
+                    // require two stable checks to be confident file finished writing
+                    if (stableCount >= 2) return true;
+                }
+            } catch (err) {
+                // network/timing issue; ignore and retry
+                console.warn("waitForAudioStable HEAD error:", err);
+            }
+
+            await new Promise(r => setTimeout(r, intervalMs));
         }
+        return false;
+    }
+
+    /**
+     * Robustly attach audio src and wait for canplaythrough before playing.
+     * Avoids playing partial file while the server is still writing.
+     */
+    function showAudioControlsAndPlay(url) {
+        const audio = document.getElementById("responseAudio");
+        const playBtn = document.getElementById("playVoiceBtn");
+        const replayBtn = document.getElementById("replayBtn");
+
+        // Reset audio element to avoid stale state
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+
+        const fullUrl = url + '?t=' + Date.now();
+        audio.src = fullUrl;
+        audio.style.display = "block";
+        playBtn.style.display = "inline-block";
+        replayBtn.style.display = "inline-block";
+
+        // Handler when browser reports enough data to play through
+        function onCanPlayThrough() {
+            audio.removeEventListener('canplaythrough', onCanPlayThrough);
+            clearTimeout(fallbackTimer);
+            // small guard delay to avoid race with final server flush
+            setTimeout(() => {
+                audio.currentTime = 0;
+                audio.play().catch(err => {
+                    console.warn("Play after canplaythrough failed:", err);
+                });
+            }, 150);
+        }
+
+        // Fallback: allow manual play if canplaythrough never fires
+        const fallbackTimer = setTimeout(() => {
+            audio.removeEventListener('canplaythrough', onCanPlayThrough);
+            console.warn("canplaythrough timeout — letting user play manually.");
+        }, 10000);
+
+        audio.addEventListener('canplaythrough', onCanPlayThrough);
+        audio.addEventListener('play', () => clearTimeout(fallbackTimer));
+    }
+
+    function playResponse() {
+        const audio = document.getElementById("responseAudio");
+        if (!audio.src) {
+            console.warn("Audio not ready yet");
+            return;
+        }
+        audio.currentTime = 0;
+        audio.play().catch(e => console.error("Play failed:", e));
+    }
+
+    function replayAudio() {
+        const audio = document.getElementById("responseAudio");
+        audio.currentTime = 0;
+        audio.play().catch(e => console.error("Replay failed:", e));
+    }
+
+    // -------------- Send query and handle response --------------
+    async function sendQuery() {
+        const userInput = document.getElementById("userInput").value;
+        if (!userInput) return;
+
+        let resp;
+        try {
+            resp = await fetch("/api/query", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: userInput })
+            });
+        } catch (e) {
+            console.error("Network error sending query:", e);
+            return;
+        }
+
+        if (resp.status === 400) {
+            const errText = await resp.text().catch(() => "Bad Request");
+            console.warn("/api/query returned 400:", errText);
+            return;
+        }
+
+        const data = await resp.json().catch(() => ({ response: "Error parsing response", audio_url: null }));
+
+        // show textual response
+        document.getElementById("textResponse").innerText = data.response || "No response.";
+
+        // If backend returned an audio_url, wait for it to be stable and then play
+        if (data.audio_url) {
+            const audioUrl = data.audio_url;
+            // Wait until the file exists and the Content-Length is stable (two consecutive checks)
+            const ready = await waitForAudioStable(audioUrl, 40, 300); // ~12s max
+            if (ready) {
+                showAudioControlsAndPlay(audioUrl);
+            } else {
+                console.warn("Audio didn't become stable in time. Showing play controls anyway.");
+                document.getElementById("playVoiceBtn").style.display = "inline-block";
+                document.getElementById("responseAudio").style.display = "block";
+            }
+        } else {
+            console.warn("No audio_url in API response.");
+        }
+    }
+
+    // -------------- History modal (unchanged logic) --------------
+    function showHistory() {
+        document.getElementById("overlay").style.display = "block";
+        document.getElementById("historyModal").style.display = "block";
+        fetch("/recap")
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("historyContent").textContent = data.recap || "No conversation history.";
+            })
+            .catch(err => {
+                document.getElementById("historyContent").textContent = "⚠️ Error loading history.";
+            });
+    }
+
+    function closeHistory() {
+        document.getElementById("overlay").style.display = "none";
+        document.getElementById("historyModal").style.display = "none";
+    }
+
+    function clearHistory() {
+        fetch("/clear_history", { method: "POST" })
+            .then(res => res.json())
+            .then(data => {
+                if (data.cleared) {
+                    document.getElementById("historyContent").textContent = "✅ History cleared.";
+                } else {
+                    document.getElementById("historyContent").textContent = "⚠️ Failed to clear history.";
+                }
+            })
+            .catch(err => {
+                document.getElementById("historyContent").textContent = "⚠️ Error clearing history.";
+            });
+    }
+
+    // Placeholder voice start/stop (your voice.js can override these)
+    function startVoice() { console.log("startVoice() called — your voice.js may override this."); }
+    function stopVoice() { console.log("stopVoice() called — your voice.js may override this."); }
     </script>
 </body>
 </html>

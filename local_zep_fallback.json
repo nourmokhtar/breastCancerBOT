@@ -18,5 +18,125 @@
   {
     "role": "assistant",
     "content": "It seems like you said hello again. If you're ready to talk about breast cancer or need information, I'm here to listen and help. If not, feel free to say hello as many times as you like."
+  },
+  {
+    "role": "user",
+    "content": "hello"
+  },
+  {
+    "role": "assistant",
+    "content": "It seems like you're still saying hello. If you're ready to talk about breast cancer or need information, I'm here to listen and help. If not, I can also provide some general information or resources about breast health if you're interested."
+  },
+  {
+    "role": "user",
+    "content": "hello"
+  },
+  {
+    "role": "assistant",
+    "content": "👋 Hello! I'm here for breast cancer info & support. Ask me anything."
+  },
+  {
+    "role": "user",
+    "content": "i think i have cancer"
+  },
+  {
+    "role": "assistant",
+    "content": "👋 Hello! I'm here for breast cancer info & support. Ask me anything."
+  },
+  {
+    "role": "user",
+    "content": "what are the symptoms of lung cancer"
+  },
+  {
+    "role": "assistant",
+    "content": "❌ I can only answer questions about breast cancer."
+  },
+  {
+    "role": "user",
+    "content": "what are the symptoms of breast cancer"
+  },
+  {
+    "role": "assistant",
+    "content": "Bonjour, I'm here to support you. \n\nThe symptoms of breast cancer that you should be aware of include:\n\n1. Any new, hard lump or thickening in any part of the breast.\n2. Change in breast size or shape.\n3. Dimpling or puckering of the skin on the breast.\n4. Swelling, redness or warmth in the breast that does not go away.\n5. Breast pain in one spot that does not vary with your monthly cycle.\n6. Pulling in of the nipple.\n7. Nipple discharge that starts suddenly and appears only in one breast.\n8. An itchy, sore or scaling area on one nipple.\n\nIt's essential to remember that these symptoms can also be caused by other conditions, so it's crucial to consult a doctor if you experience any of them.\n\nAs a supportive message, I want to remind you that you're not alone in this journey. Breast cancer is a common condition, and many women have successfully overcome it. Don't hesitate to reach out to your loved ones, friends, or a support group for emotional support.\n\nIn Tunisia, where mental health is often stigmatized, it's essential to prioritize your emotional well-being. Consider reaching out to organizations like the Tunisian Association for Mental Health or the Tunisian Red Crescent, which offer counseling services and support groups.\n\nRemember, your health and well-being are essential. Take care of yourself, and don't hesitate to seek help when you need it."
+  },
+  {
+    "role": "user",
+    "content": "Hello!"
+  },
+  {
+    "role": "assistant",
+    "content": "👋 Hello! I'm here for breast cancer info & support. Ask me anything."
+  },
+  {
+    "role": "user",
+    "content": "what are the symptoms of breast cancer?"
+  },
+  {
+    "role": "assistant",
+    "content": "Bonjour, I'm here to support you. \n\nThe symptoms of breast cancer that you should be aware of include:\n\n1. Any new, hard lump or thickening in any part of the breast.\n2. Change in breast size or shape.\n3. Dimpling or puckering of the skin on the breast.\n4. Swelling, redness or warmth in the breast that does not go away.\n5. Breast pain in one spot that does not vary with your monthly cycle.\n6. Pulling in of the nipple.\n7. Nipple discharge that starts suddenly and appears only in one breast.\n8. An itchy, sore or scaling area on one nipple.\n\nIt's essential to remember that these symptoms can also be caused by other conditions, so if you notice any of these changes, it's crucial to consult a doctor for a proper evaluation.\n\nTake care of yourself, and remember that you're not alone in this journey. If you're feeling anxious or overwhelmed, consider reaching out to a mental health professional or a support group in Tunisia for guidance and support."
+  },
+  {
+    "role": "user",
+    "content": "what are the symptoms of breast cancer"
+  },
+  {
+    "role": "user",
+    "content": "what are the symptoms of breast cancer"
+  },
+  {
+    "role": "assistant",
+    "content": "Bonjour, I'm here to support you. \n\nThe symptoms of breast cancer that you should be aware of include:\n\n1. Any new, hard lump or thickening in any part of the breast.\n2. Change in breast size or shape.\n3. Dimpling or puckering of the skin on the breast.\n4. Swelling, redness or warmth in the breast that does not go away.\n5. Breast pain in one spot that does not vary with your monthly cycle.\n6. Pulling in of the nipple.\n7. Nipple discharge that starts suddenly and appears only in one breast.\n8. An itchy, sore or scaling area on one nipple.\n\nIt's essential to remember that these symptoms can also be caused by other conditions, so it's crucial to consult a doctor if you notice any unusual changes in your breast.\n\nRemember, early detection is key to effective treatment. Don't hesitate to reach out to a healthcare professional if you have any concerns.\n\nIn Tunisia, where mental health support is essential, remember that you're not alone. If you're feeling anxious or overwhelmed, consider reaching out to a mental health professional or a trusted friend and family member for support."
+  },
+  {
+    "role": "assistant",
+    "content": "Bonjour, I'm here to support you. \n\nThe symptoms of breast cancer that you should be aware of include:\n\n1. Any new, hard lump or thickening in any part of the breast.\n2. Change in breast size or shape.\n3. Dimpling or puckering of the skin on the breast.\n4. Swelling, redness or warmth in the breast that does not go away.\n5. Breast pain in one spot that does not vary with your monthly cycle.\n6. Pulling in of the nipple.\n7. Nipple discharge that starts suddenly and appears only in one breast.\n8. An itchy, sore or scaling area on one nipple.\n\nIt's essential to remember that these symptoms can also be caused by other conditions, so it's crucial to consult a doctor if you notice any unusual changes in your breasts.\n\nMental health tip: Breast cancer diagnosis can be emotionally challenging. Allow yourself to feel your emotions, and don't hesitate to reach out to loved ones, support groups, or mental health professionals for help. In Tunisia, you can contact the Tunisian Association for Cancer Research and Control (ATLCC) for support and guidance."
+  },
+  {
+    "role": "user",
+    "content": "hello"
+  },
+  {
+    "role": "assistant",
+    "content": "👋 Hello! I'm here for breast cancer info & support. Ask me anything."
+  },
+  {
+    "role": "user",
+    "content": "hello"
+  },
+  {
+    "role": "assistant",
+    "content": "👋 Hello! I'm here for breast cancer info & support. Ask me anything."
+  },
+  {
+    "role": "user",
+    "content": "whata re the symptoms of breast cancer"
+  },
+  {
+    "role": "assistant",
+    "content": "Bonjour, I'm here to help you understand the symptoms of breast cancer. \n\nThe common symptoms of breast cancer that you should be aware of include:\n\n1. Any new, hard lump or thickening in any part of the breast.\n2. Change in breast size or shape.\n3. Dimpling or puckering of the skin on the breast.\n4. Swelling, redness or warmth in the breast that does not go away.\n5. Breast pain in one spot that does not vary with your monthly cycle.\n6. Pulling in of the nipple.\n7. Nipple discharge that starts suddenly and appears only in one breast.\n8. An itchy, sore or scaling area on one nipple.\n\nIt's essential to remember that these symptoms can also be caused by other conditions, and only a doctor can determine if they are related to breast cancer.\n\nIf you're experiencing any of these symptoms, don't hesitate to consult a doctor. Early detection and treatment can significantly improve the chances of successful treatment.\n\nRemember, taking care of your mental health is also crucial during this time. In Tunisia, you can reach out to the Tunisian Association for Cancer Research and Prevention (ATLCP) for support and resources. Additionally, consider practicing mindfulness and self-compassion to help manage any anxiety or stress you may be feeling."
+  },
+  {
+    "role": "user",
+    "content": "hello"
+  },
+  {
+    "role": "assistant",
+    "content": "👋 Hello! I'm here for breast cancer info & support. Ask me anything."
+  },
+  {
+    "role": "user",
+    "content": "what are the symptoms of breast cancer"
+  },
+  {
+    "role": "assistant",
+    "content": "Bonjour, I'm here to support you. \n\nThe symptoms of breast cancer that you should be aware of include:\n\n1. Any new, hard lump or thickening in any part of the breast.\n2. Change in breast size or shape.\n3. Dimpling or puckering of the skin on the breast.\n4. Swelling, redness or warmth in the breast that does not go away.\n5. Breast pain in one spot that does not vary with your monthly cycle.\n6. Pulling in of the nipple.\n7. Nipple discharge that starts suddenly and appears only in one breast.\n8. An itchy, sore or scaling area on one nipple.\n\nIt's essential to remember that these symptoms can also be caused by other conditions, and only a doctor can determine if they are related to breast cancer.\n\nTake care of yourself, and don't hesitate to reach out if you have any concerns. Remember, early detection is key to effective treatment.\n\nMental health tip: If you're feeling anxious or overwhelmed, consider talking to a mental health professional or a trusted friend or family member. In Tunisia, you can also reach out to the Tunisian Association for Mental Health (ATPS) for support."
+  },
+  {
+    "role": "user",
+    "content": "what are the symptoms of breast cancer"
+  },
+  {
+    "role": "assistant",
+    "content": "Bonjour, I'm here to support you. \n\nThe symptoms of breast cancer that you should be aware of include:\n\n1. Any new, hard lump or thickening in any part of the breast.\n2. Change in breast size or shape.\n3. Dimpling or puckering of the skin on the breast.\n4. Swelling, redness or warmth in the breast that does not go away.\n5. Breast pain in one spot that does not vary with your monthly cycle.\n6. Pulling in of the nipple.\n7. Nipple discharge that starts suddenly and appears only in one breast.\n8. An itchy, sore or scaling area on one nipple.\n\nIt's essential to remember that these symptoms can also be caused by other conditions, and only a doctor can determine if they are related to breast cancer. If you notice any of these symptoms, don't hesitate to consult a doctor.\n\nIn Tunisia, where you may be experiencing stress and anxiety related to your health, remember that taking care of your mental health is just as important as your physical health. Consider practicing mindfulness, meditation, or deep breathing exercises to help manage your stress levels. You can also reach out to a mental health professional or a support group for guidance and support.\n\nRestez forte et n'ayez pas peur de demander de l'aide. (Stay strong and don't be afraid to ask for help.)"
   }
 ]
